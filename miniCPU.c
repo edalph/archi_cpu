@@ -317,7 +317,8 @@ void add(ALSU *alsu,Register B) {
   }
   setZ(alsu);                                 //MaJ indicateurs
   setN(alsu);
-  alsu->flags[1] = res_FA[1];
+  alsu->flags[1] = res_FA[1];                 //Carry
+                                              //Overflow
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -345,17 +346,32 @@ void and(CPU *cpu,Register B) {
 
 
 /*
- * Ou.
+ * Ou.     OR(A,B) = NAND(NOT(A),NOT(B)) = NAND(NAND(A,A),NAND(B,B))
  */
 void or(CPU *cpu,Register B) {
-  // à compléter
+  nand(&cpu->alsu,cpu->alsu.accu);   //NOT A
+  cpu->R0 = copyRegister(cpu->alsu.accu);
+  pass(&cpu->alsu,B);
+  nand(&cpu->alsu,cpu->alsu.accu);   //NOT B
+  nand(&cpu->alsu,cpu->R0);
+  setZ(&cpu->alsu);                                 //MaJ indicateurs
+  setN(&cpu->alsu);
 }
 
 /*
- * Xor.
+ * Xor.     XOR(A,B) = NAND(NAND(A,NOT(B)),NAND(NOT(A),B)) = NAND(NAND(A,NAND(B,B)),NAND(NAND(A,A),B))
  */
 void xor(CPU *cpu,Register B) {
-  // à compléter
+  cpu->R0 = copyRegister(cpu->alsu.accu); //R0<-A
+  nand(&cpu->alsu,cpu->alsu.accu);   //NOT A
+  nand(&cpu->alsu,B);
+  cpu->R1 = copyRegister(cpu->alsu.accu); //R1<-NAND(NOT(A),B)
+  pass(&cpu->alsu,B);
+  nand(&cpu->alsu,cpu->alsu.accu);   //NOT B
+  nand(&cpu->alsu,cpu->R0);         //NAND(NOT(B),A)
+  nand(&cpu->alsu,cpu->R1);        //NAND(NAND(NOT(B),A),NAND(NOT(A),B))
+  setZ(&cpu->alsu);                                 //MaJ indicateurs
+  setN(&cpu->alsu);
 }
 
 /*
