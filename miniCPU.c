@@ -118,10 +118,10 @@ Register initR(int size,int n) {
 /*
  * Initialisation du mot (mot de 10 à 30 bits) par recopie des bits du mot en paramètre.
  */
-void copyValue(Register R,Register src) {
+void copyValue(Register *R,Register src) {
   int i;
   for(i=0;i<src.size;i++){
-    R.word[i]=src.word[i];
+    R->word[i]=src.word[i];
   }
 }
 
@@ -130,7 +130,7 @@ void copyValue(Register R,Register src) {
  */
 Register copyRegister(Register R) {
   Register C=reg(R.size);
-  copyValue(C,R);
+  copyValue(&C,R);
   return C;
 }
 
@@ -221,9 +221,14 @@ void setZ(ALSU *alsu) {
   alsu->flags[0] = nul;
 }
 
+/*
+ * Positionne l'indicateur N en fonction de l'état de l'accumulateur
+ */
 void setN(ALSU *alsu){
   if(alsu->accu.word[alsu->accu.size-1] == 1){
     alsu->flags[3] = 1;
+  }else{
+    alsu->flags[3] = 0;
   }
 }
 
@@ -257,18 +262,21 @@ void nand(ALSU *alsu,Register B) {
   }
   setZ(alsu);                                 //MaJ indicateurs
   setN(alsu);
-  }
 }
+
 
 /*
  * Décale le contenu de l'accumulateur de 1 bit vers la droite
  */
-void shift(ALSU alsu) {
+void shift(ALSU *alsu) {
   int i;
-  for(i=alsu.accu.size-1;i>0;i++){
-    alsu.accu.word[i] = alsu.accu.word[i-1];
+  for(i=alsu->accu.size-1;i>0;i++){
+    alsu->accu.word[i] = alsu->accu.word[i-1];
   }
-  alsu.accu.word[0] = 0;
+  alsu->accu.word[0] = 0;
+  setZ(alsu);                                 //MaJ indicateurs
+  setN(alsu);
+
 }
 
 /*
@@ -277,7 +285,22 @@ void shift(ALSU alsu) {
  */
 int* fullAdder(int a,int b,int cin) {
   int* res=(int*)malloc(2*sizeof(int));
-  
+  if (a == 1 && b == 1){
+    res[0] = cin;
+    res[1] = 1;
+  }else{
+    if(a == 0 && b == 0){
+      res[0] = cin;
+      res[1] = 0;
+    }else{
+      if (cin == 1){
+	res[0] = 0;
+      }else{
+	res[0] = 1;
+      }
+      res[1] = cin;
+    }
+  }
   return res;
 }
 
@@ -285,8 +308,16 @@ int* fullAdder(int a,int b,int cin) {
  * Additionne le paramètre au contenu de l'accumulateur (addition entière Cà2).
  * Les indicateurs sont positionnés conformément au résultat de l'opération.
  */
-void add(ALSU alsu,Register B) {
-  // à compléter
+void add(ALSU *alsu,Register B) {
+  int i;
+  int* res_FA=(int*)malloc(2*sizeof(int));
+  for (i=0;i<B.size;i++){
+    res_FA = fullAdder(alsu->accu.word[i],B.word[i],res_FA[1]);
+    alsu->accu.word[i] = res_FA[0];
+  }
+  setZ(alsu);                                 //MaJ indicateurs
+  setN(alsu);
+  alsu->flags[1] = res_FA[1];
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -294,31 +325,36 @@ void add(ALSU alsu,Register B) {
 ////////////////////////////////////////////////////////////////////
 
 /*
- * Négation.
+ * Négation.  NOT(A) = NAND(A,A)
  */
-void not(CPU cpu){
-  // à compléter
+void not(CPU *cpu){
+  nand(&cpu->alsu,cpu->alsu.accu);
+  setZ(&cpu->alsu);                                 //MaJ indicateurs
+  setN(&cpu->alsu);
 }
 
 /*
- * Et.
+ * Et.  AND(A,B) = NAND(NAND(A,B),NAND(A,B))
  */
-void and(CPU cpu,Register B) {
-  // à compléter
+void and(CPU *cpu,Register B) {
+  nand(&cpu->alsu,B);
+  nand(&cpu->alsu,cpu->alsu.accu);
+  setZ(&cpu->alsu);                                 //MaJ indicateurs
+  setN(&cpu->alsu);
 }
 
 
 /*
  * Ou.
  */
-void or(CPU cpu,Register B) {
+void or(CPU *cpu,Register B) {
   // à compléter
 }
 
 /*
  * Xor.
  */
-void xor(CPU cpu,Register B) {
+void xor(CPU *cpu,Register B) {
   // à compléter
 }
 
@@ -329,7 +365,7 @@ void xor(CPU cpu,Register B) {
  * libérées en cas de décalage à droite).
  * Les indicateurs sont positionnés avec le dernier bit "perdu".
  */
-void logicalShift(CPU cpu,int n) {
+void logicalShift(CPU *cpu,int n) {
   // à compléter
 }
 
@@ -340,21 +376,21 @@ void logicalShift(CPU cpu,int n) {
 /*
  * Opposé.
  */
-void opp(CPU cpu) {
+void opp(CPU *cpu) {
   // à compléter
 }
 
 /*
  * Soustraction.
  */
-void sub(CPU cpu,Register B) {
+void sub(CPU *cpu,Register B) {
   // à compléter
 }
 
 /*
  * Multiplication.
  */
-void mul(CPU cpu,Register B) {
+void mul(CPU *cpu,Register B) {
   // à compléter
 }
 
@@ -374,7 +410,7 @@ int main(int argc,char *argv[]) {
   int go_on = 1 ;
   
   char* menu =     
-    "              Programme de test\n\n0  Quitter\n1  setValue(operande,int)\n2  pass(alsu,operande)\n3  printing(alsu)\n4  afficher toString(operande)\n5  afficher intValue(operande)\n6  afficher intValue(accu)\n8  accu=add(accu,operande)\n9  accu=sub(accu,operande)\n10  accu=and(accu,operande)\n11 accu=or(accu,operande)\n12 accu=xor(accu,operande)\n13 accu=not(accu)\n14 accu=opp(accu)\n15 accu=logicalShift(accu,int)\n17 accu=mul(accu,operande)\n\n" ;
+    "              Programme de test\n\n0  Quitter\n1  setValue(operande,int)\n2  pass(alsu,operande)\n3  printing(alsu)\n4  afficher toString(operande)\n5  afficher intValue(operande)\n6  afficher intValue(accu)\n7  accu=add(accu,operande)\n8  accu=nand(accu,operande)\n9  accu=sub(accu,operande)\n10 accu=and(accu,operande)\n11 accu=or(accu,operande)\n12 accu=xor(accu,operande)\n13 accu=not(accu)\n14 accu=opp(accu)\n15 accu=logicalShift(accu,int)\n16 accu=mul(accu,operande)\n\n" ;
   
   char* invite = "--> Quel est votre choix  ? " ;
   
@@ -414,49 +450,54 @@ int main(int argc,char *argv[]) {
       printf("intValue(accu)=%d\n",intValue(alsu.accu));
       break ;
     case 7 : 
-      add(alsu,operand);
+      add(&alsu,operand);
       printf("apres add(), accu = ");
       printing(alsu);
       break ;
-    case 8 : 
-      sub(cpu,operand);
+    case 8 :
+      nand(&alsu,operand);
+      printf("apres nand(),accu = ");
+      printing(alsu);
+      break;
+    case 9 : 
+      sub(&cpu,operand);
       printf("apres sub(), A = ");
       printing(alsu);
       break ;
-    case 9 : 
-      and(cpu,operand);
+    case 10 : 
+      and(&cpu,operand);
       printf("apres and(), A = ");
       printing(alsu);
       break ;
-    case 10 : 
-      or(cpu,operand);
+    case 11 : 
+      or(&cpu,operand);
       printf("apres or(), A = ");
       printing(alsu);
       break ;
-    case 11 : 
-      xor(cpu,operand);
+    case 12 : 
+      xor(&cpu,operand);
       printf("apres xor(), A = ");
       printing(alsu);
       break ;
-    case 12 : 
-      not(cpu);
+    case 13 : 
+      not(&cpu);
       printf("apres not(), A = ");
       printing(alsu);
       break ;
-    case 13 : 
-      opp(cpu);
+    case 14 : 
+      opp(&cpu);
       printf("apres opp(), A = ");
       printing(alsu);
       break ;
-    case 14 : 
+    case 15 : 
       printf("Entrez un entier :") ;
       scanf("%d",&integer);
-      logicalShift(cpu,integer);
+      logicalShift(&cpu,integer);
       printf("apres logicalshift(), A = ");
       printing(alsu);
       break ;
-    case 15 : 
-      mul(cpu,operand);
+    case 16 : 
+      mul(&cpu,operand);
       printf("apres mul(), A = ");
       printing(alsu);
       break ;
@@ -468,6 +509,3 @@ int main(int argc,char *argv[]) {
   printf("Au revoir et a bientot\n");
   return 0;
 }
-
-
-  
