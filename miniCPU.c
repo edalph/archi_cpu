@@ -407,10 +407,10 @@ void opp(CPU *cpu) {
  * Soustraction.   A-B = A+(-B)
  */
 void sub(CPU *cpu,Register B) {
-  cpu->R0 = copyRegister(B);
+  cpu->R2 = copyRegister(cpu->alsu.accu);
   pass(&cpu->alsu,B);
   opp(cpu);
-  add(&cpu->alsu,cpu->R0);
+  add(&cpu->alsu,cpu->R2);
 }
 
 /*
