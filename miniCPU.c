@@ -270,10 +270,10 @@ void nand(ALSU *alsu,Register B) {
  */
 void shift(ALSU *alsu) {
   int i;
-  for(i=alsu->accu.size-1;i>0;i++){
-    alsu->accu.word[i] = alsu->accu.word[i-1];
+  for(i=0;i<alsu->accu.size-1;i++){
+    alsu->accu.word[i] = alsu->accu.word[i+1];
   }
-  alsu->accu.word[0] = 0;
+  alsu->accu.word[alsu->accu.size-1] = 0;
   setZ(alsu);                                 //MaJ indicateurs
   setN(alsu);
 
@@ -329,9 +329,8 @@ void add(ALSU *alsu,Register B) {
  * Négation.  NOT(A) = NAND(A,A)
  */
 void not(CPU *cpu){
-  nand(&cpu->alsu,cpu->alsu.accu);
-  setZ(&cpu->alsu);                                 //MaJ indicateurs
-  setN(&cpu->alsu);
+  cpu->R0 = copyRegister(cpu->alsu.accu);
+  nand(&cpu->alsu,cpu->R0);
 }
 
 /*
@@ -339,9 +338,8 @@ void not(CPU *cpu){
  */
 void and(CPU *cpu,Register B) {
   nand(&cpu->alsu,B);
-  nand(&cpu->alsu,cpu->alsu.accu);
-  setZ(&cpu->alsu);                                 //MaJ indicateurs
-  setN(&cpu->alsu);
+  cpu->R0 = copyRegister(cpu->alsu.accu);
+  nand(&cpu->alsu,cpu->R0);
 }
 
 
@@ -354,8 +352,6 @@ void or(CPU *cpu,Register B) {
   pass(&cpu->alsu,B);
   nand(&cpu->alsu,cpu->alsu.accu);   //NOT B
   nand(&cpu->alsu,cpu->R0);
-  setZ(&cpu->alsu);                                 //MaJ indicateurs
-  setN(&cpu->alsu);
 }
 
 /*
@@ -370,8 +366,6 @@ void xor(CPU *cpu,Register B) {
   nand(&cpu->alsu,cpu->alsu.accu);   //NOT B
   nand(&cpu->alsu,cpu->R0);         //NAND(NOT(B),A)
   nand(&cpu->alsu,cpu->R1);        //NAND(NAND(NOT(B),A),NAND(NOT(A),B))
-  setZ(&cpu->alsu);                                 //MaJ indicateurs
-  setN(&cpu->alsu);
 }
 
 /*
@@ -382,7 +376,17 @@ void xor(CPU *cpu,Register B) {
  * Les indicateurs sont positionnés avec le dernier bit "perdu".
  */
 void logicalShift(CPU *cpu,int n) {
-  // à compléter
+  int i;
+  if (n>0){
+    for (i=0;i<n;i++){
+      cpu->R0 = copyRegister(cpu->alsu.accu);
+      add(&cpu->alsu,cpu->R0);
+    }
+  }else{
+    for (i=0;i>n;i--){
+      shift(&cpu->alsu);
+    }
+  }
 }
 
 /////////////////////////////////////////////////////////
@@ -390,17 +394,23 @@ void logicalShift(CPU *cpu,int n) {
 /////////////////////////////////////////////////////////
 
 /*
- * Opposé.
+ * Opposé.   -A = NOT(A)+1
  */
 void opp(CPU *cpu) {
-  // à compléter
+  cpu->R0 = copyRegister(cpu->alsu.accu);
+  nand(&cpu->alsu,cpu->R0);
+  setValue(cpu->R1,1);
+  add(&cpu->alsu,cpu->R1);
 }
 
 /*
- * Soustraction.
+ * Soustraction.   A-B = A+(-B)
  */
 void sub(CPU *cpu,Register B) {
-  // à compléter
+  cpu->R0 = copyRegister(B);
+  pass(&cpu->alsu,B);
+  opp(cpu);
+  add(&cpu->alsu,cpu->R0);
 }
 
 /*
@@ -509,6 +519,7 @@ int main(int argc,char *argv[]) {
       printf("Entrez un entier :") ;
       scanf("%d",&integer);
       logicalShift(&cpu,integer);
+      //shift(&cpu.alsu);
       printf("apres logicalshift(), A = ");
       printing(alsu);
       break ;
