@@ -309,16 +309,26 @@ int* fullAdder(int a,int b,int cin) {
  * Les indicateurs sont positionnés conformément au résultat de l'opération.
  */
 void add(ALSU *alsu,Register B) {
-  int i;
+  int i,cn,an,bn;
   int* res_FA=(int*)malloc(2*sizeof(int));
   for (i=0;i<B.size;i++){
+    if (i == B.size-1){          //recuperation des dernieres valeurs des registres pour verifier l'overflow
+      cn = res_FA[1];
+      an = alsu->accu.word[i];
+      bn = B.word[i];
+    }
     res_FA = fullAdder(alsu->accu.word[i],B.word[i],res_FA[1]);
     alsu->accu.word[i] = res_FA[0];
   }
   setZ(alsu);                                 //MaJ indicateurs
   setN(alsu);
   alsu->flags[1] = res_FA[1];                 //Carry
-                                              //Overflow
+
+  if (an == bn && an != cn){                  //Overflow
+    alsu->flags[2] = 1;
+  }else{
+    alsu->flags[2] = 0;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -418,24 +428,25 @@ void sub(CPU *cpu,Register B) {
  */
 void mul(CPU *cpu,Register B) {
   int i;
-  cpu->R0 = copyRegister(B);
   cpu->R1 = copyRegister(cpu->alsu.accu);
   setValue(cpu->alsu.accu,0);
+  printf("iteration %d :\naccu = %s\nR0 = %s\nR1 = %s\nR2 = %s\nB = %s\n",0,toString(cpu->alsu.accu),toString(cpu->R0),toString(cpu->R1),toString(cpu->R2),toString(B));
   for (i=0;i<cpu->alsu.accu.size;i++){
-    if (cpu->R1.word[i] = 0){     //si un bit du premier nombre vaut 0, on effectue juste un decalage a droite sur le deuxieme nombre
+    if (B.word[i] = 0){     //si un bit du premier nombre vaut 0, on effectue juste un decalage a droite sur le deuxieme nombre
       cpu->R2 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R0);
+      pass(&cpu->alsu,cpu->R1);
       logicalShift(cpu,1);
-      cpu->R0 = copyRegister(cpu->alsu.accu);
+      cpu->R1 = copyRegister(cpu->alsu.accu);
       pass(&cpu->alsu,cpu->R2);
     }else{
-      add(&cpu->alsu,cpu->R0);
+      add(&cpu->alsu,cpu->R1);
       cpu->R2 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R0);
+      pass(&cpu->alsu,cpu->R1);
       logicalShift(cpu,1);
-      cpu->R0 = copyRegister(cpu->alsu.accu);
+      cpu->R1 = copyRegister(cpu->alsu.accu);
       pass(&cpu->alsu,cpu->R2);
     }
+    printf("iteration %d :\naccu = %s\nR0 = %s\nR1 = %s\nR2 = %s\nB = %s\n",i+1,toString(cpu->alsu.accu),toString(cpu->R0),toString(cpu->R1),toString(cpu->R2),toString(B));
   }
 }
 
