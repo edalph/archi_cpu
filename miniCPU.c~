@@ -417,26 +417,7 @@ void sub(CPU *cpu,Register B) {
  * Multiplication.
  */
 void mul(CPU *cpu,Register B) {
-  int i;
-  cpu->R0 = copyRegister(B);
-  cpu->R1 = copyRegister(cpu->alsu.accu);
-  setValue(cpu->alsu.accu,0);
-  for (i=0;i<cpu->alsu.accu.size;i++){
-    if (cpu->R1.word[i] = 0){     //si un bit du premier nombre vaut 0, on effectue juste un decalage a droite sur le deuxieme nombre
-      cpu->R2 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R0);
-      logicalShift(cpu,1);
-      cpu->R0 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R2);
-    }else{
-      add(&cpu->alsu,cpu->R0);
-      cpu->R2 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R0);
-      logicalShift(cpu,1);
-      cpu->R0 = copyRegister(cpu->alsu.accu);
-      pass(&cpu->alsu,cpu->R2);
-    }
-  }
+  // à compléter
 }
 
 /////////////////////////////////////////////////////////
