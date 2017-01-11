@@ -212,7 +212,7 @@ void printing(ALSU alsu) {
  */
 void setZ(ALSU *alsu) {
   int nul=1,i=0;
-  while (nul && i<alsu->accu.size){
+  while (nul && i < alsu->accu.size){
     if(alsu->accu.word[i] == 1){
       nul = 0;
     }
@@ -324,7 +324,6 @@ void add(ALSU *alsu,Register B) {
   setZ(alsu);                                 //MaJ indicateurs
   setN(alsu);
   alsu->flags[1] = res_FA[1];                 //Carry
-
   if (an == bn && an != cn){                  //Overflow
     alsu->flags[2] = 1;
   }else{
@@ -339,9 +338,8 @@ void add(ALSU *alsu,Register B) {
 /*
  * Négation.  NOT(A) = NAND(A,A)
  */
-void not(CPU *cpu){
-  cpu->R0 = copyRegister(cpu->alsu.accu);
-  nand(&cpu->alsu,cpu->R0);
+void not(CPU *cpu) {
+  nand(&cpu->alsu,cpu->alsu.accu);
 }
 
 /*
@@ -349,8 +347,7 @@ void not(CPU *cpu){
  */
 void and(CPU *cpu,Register B) {
   nand(&cpu->alsu,B);
-  cpu->R0 = copyRegister(cpu->alsu.accu);
-  nand(&cpu->alsu,cpu->R0);
+  nand(&cpu->alsu,cpu->alsu.accu);
 }
 
 
@@ -390,8 +387,7 @@ void logicalShift(CPU *cpu,int n) {
   int i;
   if (n>0){
     for (i=0;i<n;i++){
-      cpu->R0 = copyRegister(cpu->alsu.accu);
-      add(&cpu->alsu,cpu->R0);
+      add(&cpu->alsu,cpu->alsu.accu);
     }
   }else{
     for (i=0;i>n;i--){
@@ -408,8 +404,7 @@ void logicalShift(CPU *cpu,int n) {
  * Opposé.   -A = NOT(A)+1
  */
 void opp(CPU *cpu) {
-  cpu->R0 = copyRegister(cpu->alsu.accu);
-  nand(&cpu->alsu,cpu->R0);
+  not(cpu);
   setValue(cpu->R1,1);
   add(&cpu->alsu,cpu->R1);
 }
